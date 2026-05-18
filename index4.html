@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Notes App</title>
+    <style>
+        /* Base Styling */
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background-color: #f3f4f6;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            max-width: 800px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #1f2937;
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        /* Search Bar & Input Box Wrapper */
+        .app-header {
+            background: #ffffff;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            margin-bottom: 25px;
+        }
+
+        .search-box {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 15px;
+            margin-bottom: 15px;
+            box-sizing: border-box;
+            outline: none;
+        }
+
+        .search-box:focus, .note-textarea:focus {
+            border-color: #3b82f6;
+        }
+
+        .note-textarea {
+            width: 100%;
+            height: 100px;
+            padding: 12px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 15px;
+            resize: none;
+            box-sizing: border-box;
+            outline: none;
+            margin-bottom: 10px;
+        }
+
+        .btn-add {
+            background-color: #3b82f6;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            transition: background 0.2s;
+        }
+
+        .btn-add:hover {
+            background-color: #2563eb;
+        }
+
+        /* Notes Grid Display */
+        .notes-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 20px;
+        }
+
+        .note-card {
+            background: #ffffff;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-height: 150px;
+            word-wrap: break-word;
+            border-top: 5px solid #3b82f6;
+        }
+
+        .note-text {
+            color: #4b5563;
+            font-size: 15px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+        }
+
+        .note-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 15px;
+            font-size: 12px;
+            color: #9ca3af;
+        }
+
+        .btn-delete {
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+
+        .btn-delete:hover {
+            background-color: #dc2626;
+        }
+
+        /* Empty State */
+        .no-notes {
+            text-align: center;
+            color: #9ca3af;
+            grid-column: 1 / -1;
+            padding: 40px;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>📝 My Advanced Notes</h1>
+
+    <div class="app-header">
+        <!-- Live Search Feature -->
+        <input type="text" id="searchBox" class="search-box" placeholder="🔍 Search notes..." oninput="filterNotes()">
+        
+        <!-- Add New Note -->
+        <textarea id="noteTextarea" class="note-textarea" placeholder="Write a note here..."></textarea>
+        <button class="btn-add" onclick="addNote()">Add Note</button>
+    </div>
+
+    <!-- Notes Container Grid -->
+    <div id="notesGrid" class="notes-grid"></div>
+</div>
+
+<script>
+    // 1. Shuruat mein Local Storage se data nikalna (State Management)
+    let notes = JSON.parse(localStorage.getItem("savedNotes")) || [];
+
+    // App load hote hi purane notes dikhana
+    displayNotes(notes);
+
+    // 2. Naya Note Add karne ka logic
+    function addNote() {
+        const textarea = document.getElementById("noteTextarea");
+        const textValue = textarea.value.trim();
+
+        if (textValue === "") {
+            alert("Kripya note mein kuch likhein!");
+            return;
+        }
+
+        // Ek note object banana date ke sath
+        const newNote = {
+            id: Date.now(),
+            text: textValue,
+            date: new Date().toLocaleDateString('en-IN')
+        };
+
+        // State update karna (Array me jodhna)
+        notes.push(newNote);
+        
+        // Local storage update karna
+        saveToLocalStorage();
+
+        // Screen par naya data dikhana aur input khali karna
+        displayNotes(notes);
+        textarea.value = "";
+    }
+
+    // 3. Note Delete karne ka logic
+    function deleteNote(id) {
+        // Filter lagakar us ID wale note ko hata dena
+        notes = notes.filter(note => note.id !== id);
+        
+        saveToLocalStorage();
+        displayNotes(notes);
+    }
+
+    // 4. Real-time Live Search Logic
+    function filterNotes() {
+        const searchText = document.getElementById("searchBox").value.toLowerCase();
+        
+        // Search text ke mutabiq notes filter karna
+        const filteredNotes = notes.filter(note => 
+            note.text.toLowerCase().includes(searchText)
+        );
+        
+        displayNotes(filteredNotes);
+    }
+
+    // 5. Notes ko HTML grid me dikhane ka function
+    function displayNotes(notesToDisplay) {
+        const grid = document.getElementById("notesGrid");
+        grid.innerHTML = ""; // Purana data saaf karna
+
+        if (notesToDisplay.length === 0) {
+            grid.innerHTML = `<div class="no-notes">Koi notes nahi mile! 😊</div>`;
+            return;
+        }
+
+        notesToDisplay.forEach(note => {
+            const card = document.createElement("div");
+            card.className = "note-card";
+            card.innerHTML = `
+                <div class="note-text">${note.text}</div>
+                <div class="note-footer">
+                    <span>📅 ${note.date}</span>
+                    <button class="btn-delete" onclick="deleteNote(${note.id})">Delete</button>
+                </div>
+            `;
+            grid.appendChild(card);
+        });
+    }
+
+    // Local Storage me save karne ka function
+    function saveToLocalStorage() {
+        localStorage.setItem("savedNotes", JSON.stringify(notes));
+    }
+</script>
+
+</body>
+</html>
